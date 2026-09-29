@@ -456,6 +456,44 @@ describe('lib/runners/axe', function() {
 			});
 		});
 
+		describe('when a target crosses a shadow root', function() {
+
+			beforeEach(async function() {
+				const host = {
+					shadowRoot: {
+						querySelector: sinon.stub().withArgs('#inner').returns('mock-shadow-element')
+					}
+				};
+				global.window.document.querySelector.withArgs('#host').returns(host);
+				global.window.axe.run.reset();
+				global.window.axe.run.resolves({
+					violations: [
+						{
+							id: 'label',
+							description: 'shadow',
+							impact: 'critical',
+							help: 'label',
+							helpUrl: 'https://example.com/label',
+							nodes: [
+								{
+									target: [
+										['#host', '#inner']
+									]
+								}
+							]
+						}
+					],
+					incomplete: []
+				});
+				resolvedValue = await runner.run(options, pa11y);
+			});
+
+			it('returns the element inside the shadow root', function() {
+				assert.strictEqual(resolvedValue[0].element, 'mock-shadow-element');
+			});
+
+		});
+
 		describe('when axe errors', function() {
 			let axeError;
 			let rejectedError;

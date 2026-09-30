@@ -494,6 +494,49 @@ describe('lib/runners/axe', function() {
 
 		});
 
+		describe('when a target crosses nested shadow roots', function() {
+
+			beforeEach(async function() {
+				const innerHost = {
+					shadowRoot: {
+						querySelector: sinon.stub().withArgs('#leaf').returns('mock-nested-shadow-element')
+					}
+				};
+				const outerHost = {
+					shadowRoot: {
+						querySelector: sinon.stub().withArgs('#inner-host').returns(innerHost)
+					}
+				};
+				global.window.document.querySelector.withArgs('#outer-host').returns(outerHost);
+				global.window.axe.run.reset();
+				global.window.axe.run.resolves({
+					violations: [
+						{
+							id: 'label',
+							description: 'nested shadow',
+							impact: 'critical',
+							help: 'label',
+							helpUrl: 'https://example.com/label',
+							nodes: [
+								{
+									target: [
+										['#outer-host', '#inner-host', '#leaf']
+									]
+								}
+							]
+						}
+					],
+					incomplete: []
+				});
+				resolvedValue = await runner.run(options, pa11y);
+			});
+
+			it('returns the element below both shadow boundaries', function() {
+				assert.strictEqual(resolvedValue[0].element, 'mock-nested-shadow-element');
+			});
+
+		});
+
 		describe('when axe errors', function() {
 			let axeError;
 			let rejectedError;

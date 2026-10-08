@@ -583,6 +583,26 @@ describe('lib/pa11y', function() {
 					});
 				});
 
+				it('does not duplicate existing headers with different casing', function() {
+					const laterRequest = {
+						continue: sinon.stub(),
+						url: () => 'https://example.com/app.js',
+						headers: () => ({
+							Foo: 'browser-value',
+							accept: '*/*'
+						})
+					};
+					handler(laterRequest);
+					assert.calledWithExactly(laterRequest.continue, {
+						headers: {
+							accept: '*/*',
+							foo: 'bar',
+							bar: 'baz',
+							'foo-bar-baz': 'qux'
+						}
+					});
+				});
+
 				it('leaves a later cross-origin request unchanged', function() {
 					const laterRequest = {
 						continue: sinon.stub(),
@@ -593,6 +613,21 @@ describe('lib/pa11y', function() {
 					};
 					handler(laterRequest);
 					assert.calledOnce(laterRequest.continue);
+					assert.calledWithExactly(laterRequest.continue, {});
+				});
+
+				it('does not treat opaque origins as same-origin', function() {
+					const opaqueOriginHandler = puppeteer.mockPage.on.withArgs('request').firstCall.args[1];
+					opaqueOriginHandler({
+						continue: sinon.stub(),
+						url: () => 'data:text/html,first'
+					});
+					const laterRequest = {
+						continue: sinon.stub(),
+						url: () => 'data:text/javascript,later',
+						headers: () => ({accept: '*/*'})
+					};
+					opaqueOriginHandler(laterRequest);
 					assert.calledWithExactly(laterRequest.continue, {});
 				});
 
